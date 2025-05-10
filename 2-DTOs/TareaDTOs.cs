@@ -108,6 +108,10 @@ public class TareaDTO
 
     // ESTADO ACTIVO
     public bool EstaActiva { get; set; }
+
+
+    // DIAS RESTANTES (calculados con FUNC)
+    public int DiasRestantes { get; set; }
 }
 
 #endregion

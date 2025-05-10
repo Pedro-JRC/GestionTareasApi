@@ -1,6 +1,7 @@
+
 # API de Gestión de Tareas
 
-Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados y almacenamiento de datos adicionales personalizados.
+Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados.
 
 ## 🚀 Tecnologías Usadas
 
@@ -11,6 +12,9 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - **JWT (Json Web Token)** para autenticación
 - **Swagger** para pruebas y documentación
 - **PasswordHasher** para cifrado de contraseñas
+- **Middleware personalizado** para manejo global de errores
+- **Logger** con eventos personalizados (`EventosTarea`)
+- **Delegados y Func<>** para lógica flexible de validación y filtrado
 
 ## 📂 Estructura del Proyecto
 
@@ -18,8 +22,11 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - `2-DTOs`: Objetos de transferencia para creación, actualización y respuesta.
 - `3-Servicios`: Lógica de negocio y acceso a datos.
 - `4-Controllers`: Endpoints de la API.
+- `Funciones`: Filtros y utilidades con `Func<>`, lambdas y delegados reutilizables.
+- `Delegados`: Delegados y firmas para validaciones desacopladas.
 - `Utilidades`: Helpers como `SeguridadHelper` y `DatosAdicionalesHelper`.
-- `Middleware`: Manejador de excepciones personalizado.
+- `Eventos`: Registro centralizado de eventos (logging personalizado).
+- `Middleware`: Manejador de excepciones global.
 - `Data`: `AppDbContext` para EF Core.
 - `Program.cs`: Configuración principal del host, servicios y middlewares.
 
@@ -48,18 +55,18 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 
 1. 📦 Ejecuta las migraciones:
 
-- Crear migración
 ```bash
 Add-Migration Inicial
- ```
-- Aplica la migración
-```bash
 Update-Database
 ```
-3. Corre la aplicación desde Visual Studio:
 
+2. Corre la aplicación desde Visual Studio o terminal:
 
-4. Accede a la documentación Swagger en:  
+```bash
+dotnet run
+```
+
+3. Accede a la documentación Swagger en:  
    [https://localhost:{puerto}/swagger](https://localhost:{puerto}/swagger)
 
 ## 🔐 Endpoints Principales
@@ -69,7 +76,7 @@ Update-Database
 | Método | Ruta                  | Descripción             |
 |--------|-----------------------|-------------------------|
 | POST   | /api/auth/login       | Iniciar sesión (JWT)    |
-| POST   | /api/auth/refresh     | Refrescar token JWT     |
+| POST   | /api/auth/refrescartoken | Refrescar token JWT |
 
 ### Usuarios
 
@@ -77,7 +84,7 @@ Update-Database
 |--------|--------------------------|------------------------------|
 | GET    | /api/usuarios            | Listar usuarios              |
 | GET    | /api/usuarios/{id}       | Obtener usuario por ID       |
-| POST   | /api/usuarios/registrar  | Crear usuario                |
+| POST   | /api/usuarios            | Crear usuario                |
 | PUT    | /api/usuarios/{id}       | Actualizar usuario           |
 | DELETE | /api/usuarios/{id}       | Eliminar usuario             |
 
@@ -93,13 +100,16 @@ Update-Database
 
 ### Filtros de Tareas
 
-| Método | Ruta                                | Descripción                        |
-|--------|-------------------------------------|------------------------------------|
-| GET    | /api/filtrostareas/por-estado       | Filtrar por estado                 |
-| GET    | /api/filtrostareas/por-fecha        | Filtrar por fecha de vencimiento  |
-| GET    | /api/filtrostareas/por-categoria    | Filtrar por categoría              |
-| GET    | /api/filtrostareas/por-etiqueta     | Buscar en DatosAdicionales (lista)|
-| GET    | /api/filtrostareas/por-prioridad-datos | Buscar número en DatosAdicionales|
+| Método | Ruta                                   | Descripción                          |
+|--------|----------------------------------------|--------------------------------------|
+| GET    | /api/filtrostareas/por-estado          | Filtrar por estado                   |
+| GET    | /api/filtrostareas/por-fecha           | Filtrar por fecha de vencimiento     |
+| GET    | /api/filtrostareas/por-categoria       | Filtrar por categoría                |
+| GET    | /api/filtrostareas/por-etiqueta        | Buscar etiqueta en DatosAdicionales  |
+| GET    | /api/filtrostareas/por-prioridad       | Filtrar por prioridad directa        |
+| GET    | /api/filtrostareas/por-asignado        | Filtrar por usuario asignado         |
+| GET    | /api/filtrostareas/por-estado-y-fecha  | Filtrar por estado y fecha combinados|
+| GET    | /api/filtrostareas/por-prioridad-datos | Buscar número en DatosAdicionales    |
 
 ## 📋 Ejemplo de Payload para Crear Tarea
 
@@ -128,4 +138,5 @@ Update-Database
 ---
 
 **Autor:** Pedro Rosario  
-**Proyecto Educativo** – Curso C# .NET Avanzado
+**Proyecto Educativo** – Curso C# .NET Avanzado  
+**Última actualización:** Mayo 2025

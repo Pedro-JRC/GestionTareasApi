@@ -1,4 +1,5 @@
 using GestionTareasApi.Data;
+using GestionTareasApi.Eventos;
 using GestionTareasApi.Servicios;
 using GestorTareasApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,6 +18,7 @@ namespace GestionTareasApi
 
             #region CONFIGURAR DB CONTEXT
 
+            // CONFIGURA EL CONTEXTO DE BASE DE DATOS CON SQL SERVER
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ConexionPorDefecto")));
 
@@ -24,6 +26,7 @@ namespace GestionTareasApi
 
             #region REGISTRAR SERVICIOS
 
+            // REGISTRA LOS SERVICIOS PERSONALIZADOS
             builder.Services.AddScoped<TareasService>();
             builder.Services.AddScoped<UsuariosService>();
             builder.Services.AddScoped<ServicioAutenticacion>();
@@ -32,10 +35,12 @@ namespace GestionTareasApi
 
             #region CONFIGURAR AUTENTICACIÓN JWT
 
+            // OBTIENE LA CLAVE SECRETA DESDE LA CONFIGURACIÓN
             var jwtKey = builder.Configuration["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
                 throw new InvalidOperationException("La clave JWT (Jwt:Key) no está definida en appsettings.json.");
 
+            // CONFIGURA LOS PARÁMETROS DE VALIDACIÓN DEL TOKEN JWT
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
@@ -51,13 +56,14 @@ namespace GestionTareasApi
                     };
                 });
 
-
             #endregion
 
             #region CONFIGURAR CONTROLADORES Y SWAGGER
 
+            // AGREGA CONTROLADORES
             builder.Services.AddControllers();
 
+            // CONFIGURA SWAGGER PARA DOCUMENTACIÓN DE LA API
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -66,7 +72,7 @@ namespace GestionTareasApi
                     Version = "v1"
                 });
 
-                
+                // CONFIGURA EL ESQUEMA DE SEGURIDAD JWT PARA SWAGGER
                 var jwtSecurityScheme = new OpenApiSecurityScheme
                 {
                     BearerFormat = "JWT",
@@ -94,14 +100,20 @@ namespace GestionTareasApi
 
             var app = builder.Build();
 
+            // CONFIGURA EL LOGGER PARA EVENTOS DE TAREA
+            var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("EventosTarea");
+            EventosTarea.ConfigurarLogger(logger);
+
             #region MIDDLEWARE GLOBAL
 
+            // AGREGA EL MIDDLEWARE GLOBAL DE MANEJO DE EXCEPCIONES
             app.UseMiddleware<ManejadorExcepcionesMiddleware>();
 
             #endregion
 
             #region CONFIGURACIÓN DE SWAGGER
 
+            // MUESTRA SWAGGER SOLO EN ENTORNO DE DESARROLLO
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -116,15 +128,18 @@ namespace GestionTareasApi
 
             #region PIPELINE HTTP
 
+            // CONFIGURA REDIRECCIÓN HTTPS Y AUTENTICACIÓN
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
+            // MAPEA LOS CONTROLADORES
             app.MapControllers();
 
             #endregion
 
+            // INICIA LA APLICACIÓN
             app.Run();
         }
     }

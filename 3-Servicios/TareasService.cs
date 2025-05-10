@@ -1,8 +1,11 @@
 ﻿using GestionTareasApi.Models;
 using GestionTareasApi.Data;
 using GestionTareasApi.DTOs;
+using GestionTareasApi.Eventos;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using static GestionTareasApi.Delegados.DelegadosTarea;
+using GestionTareasApi.Funciones;
 
 namespace GestionTareasApi.Servicios;
 
@@ -39,6 +42,12 @@ public class TareasService
 
     public async Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearAsync(CrearTareaDTO dto)
     {
+        ValidadorTareaDelegate validador = ValidacionesTareaService.ValidarDatosBasicos;
+        var (valido, mensajeValidacion) = validador(dto);
+
+        if (!valido)
+            return (false, mensajeValidacion, null);
+
         if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
         {
             var existeUsuario = await _context.Usuarios
@@ -65,7 +74,11 @@ public class TareasService
         _context.Tareas.Add(entidad);
         await _context.SaveChangesAsync();
 
-        return (true, "Tarea creada correctamente.", MapearADTO(entidad));
+        var tareaDTO = MapearADTO(entidad);
+        EventosTarea.RegistrarEvento(tareaDTO);
+
+        var mensajeEvento = EventosTarea.GenerarMensaje(tareaDTO);
+        return (true, mensajeEvento, tareaDTO);
     }
 
     #endregion
@@ -77,6 +90,12 @@ public class TareasService
         var tarea = await _context.Tareas.FindAsync(dto.Id);
         if (tarea == null)
             return (false, "Tarea no encontrada.");
+
+        ValidadorTareaActualizadaDelegate validador = ValidacionesTareaService.ValidarDatosActualizados;
+        var (valido, mensajeValidacion) = validador(dto);
+
+        if (!valido)
+            return (false, mensajeValidacion!);
 
         if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
         {
@@ -101,10 +120,14 @@ public class TareasService
         tarea.EstaActiva = dto.EstaActiva;
 
         await _context.SaveChangesAsync();
+        EventosTarea.RegistrarEvento(MapearADTO(tarea));
+
         return (true, "Tarea actualizada correctamente.");
     }
 
     #endregion
+
+
 
     #region ELIMINAR UNA TAREA
 
@@ -113,8 +136,11 @@ public class TareasService
         var tarea = await _context.Tareas.FindAsync(id);
         if (tarea == null) return false;
 
+        var dto = MapearADTO(tarea);
         _context.Tareas.Remove(tarea);
         await _context.SaveChangesAsync();
+
+        EventosTarea.RegistrarEvento(dto);
         return true;
     }
 
@@ -124,7 +150,7 @@ public class TareasService
 
     private TareaDTO MapearADTO(TareaGeneral tarea)
     {
-        return new TareaDTO
+        var dto = new TareaDTO
         {
             Id = tarea.Id,
             Titulo = tarea.Titulo,
@@ -139,7 +165,11 @@ public class TareasService
             AsignadoA = tarea.AsignadoA,
             EstaActiva = tarea.EstaActiva
         };
+
+        dto.DiasRestantes = FuncionesTarea.CalcularDiasRestantes(dto);
+        return dto;
     }
+
 
     #endregion
 }

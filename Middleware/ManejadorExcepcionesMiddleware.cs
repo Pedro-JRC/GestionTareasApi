@@ -1,41 +1,61 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-namespace GestorTareasApi.Middleware;
-
-public class ManejadorExcepcionesMiddleware
+namespace GestorTareasApi.Middleware
 {
-    private readonly RequestDelegate _siguiente;
-    private readonly ILogger<ManejadorExcepcionesMiddleware> _logger;
-
-    public ManejadorExcepcionesMiddleware(RequestDelegate siguiente, ILogger<ManejadorExcepcionesMiddleware> logger)
+    public class ManejadorExcepcionesMiddleware
     {
-        _siguiente = siguiente;
-        _logger = logger;
-    }
+        #region CONSTRUCTOR Y DEPENDENCIAS
 
-    public async Task InvokeAsync(HttpContext contexto)
-    {
-        try
+        // DELEGADO DEL SIGUIENTE COMPONENTE EN LA TUBERÍA DE MIDDLEWARE
+        private readonly RequestDelegate _siguiente;
+
+        // LOGGER PARA REGISTRAR LOS ERRORES
+        private readonly ILogger<ManejadorExcepcionesMiddleware> _logger;
+
+        // CONSTRUCTOR DEL MIDDLEWARE
+        public ManejadorExcepcionesMiddleware(RequestDelegate siguiente, ILogger<ManejadorExcepcionesMiddleware> logger)
         {
-            await _siguiente(contexto);
+            _siguiente = siguiente;
+            _logger = logger;
         }
-        catch (Exception ex)
+
+        #endregion
+
+        #region INVOCACIÓN DEL MIDDLEWARE
+
+        /// <summary>
+        /// MÉTODO PRINCIPAL QUE INTERCEPTA LAS SOLICITUDES Y MANEJA LAS EXCEPCIONES
+        /// </summary>
+        public async Task InvokeAsync(HttpContext contexto)
         {
-            _logger.LogError(ex, $"Error capturado: {ex.Message}");
-
-            contexto.Response.ContentType = "application/json";
-            contexto.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            contexto.Response.Headers.Append("X-Error", "Error Interno del Servidor");
-
-            var respuesta = new
+            try
             {
-                estado = contexto.Response.StatusCode,
-                mensaje = "Ha ocurrido un error en el servidor.",
-                detalle = ex.Message
-            };
+                // EJECUTA EL SIGUIENTE MIDDLEWARE EN LA CADENA
+                await _siguiente(contexto);
+            }
+            catch (Exception ex)
+            {
+                // REGISTRA EL ERROR EN LOS LOGS
+                _logger.LogError(ex, $"Error capturado: {ex.Message}");
 
-            await contexto.Response.WriteAsync(JsonSerializer.Serialize(respuesta));
+                // CONFIGURA LA RESPUESTA DE ERROR EN FORMATO JSON
+                contexto.Response.ContentType = "application/json";
+                contexto.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                contexto.Response.Headers.Append("X-Error", "Error Interno del Servidor");
+
+                var respuesta = new
+                {
+                    estado = contexto.Response.StatusCode,
+                    mensaje = "Ha ocurrido un error en el servidor.",
+                    detalle = ex.Message
+                };
+
+                // DEVUELVE LA RESPUESTA SERIALIZADA AL CLIENTE
+                await contexto.Response.WriteAsync(JsonSerializer.Serialize(respuesta));
+            }
         }
+
+        #endregion
     }
 }
