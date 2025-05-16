@@ -1,4 +1,5 @@
 ﻿using GestionTareasApi.DTOs;
+using GestionTareasApi.Enums;
 using GestionTareasApi.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -78,6 +79,30 @@ public class TareasController : ControllerBase
             tarea = nuevaTarea
         });
     }
+
+    #endregion
+
+    #region CREAR TAREA CON CONFIGURACIÓN PREDETERMINADA
+
+    /// <summary>
+    /// CREA UNA TAREA PRECONFIGURADA USANDO EL PATRÓN FÁBRICA.
+    /// SELECCIONE EL TIPO DE TAREA ENTRE: 'Alta', 'Urgente' O 'Documentacion'.
+    /// </summary>
+    [HttpPost("crear-desde-fabrica")]
+    public async Task<IActionResult> CrearDesdeFactory(
+        [FromQuery] TipoTareaPredefinida tipo,
+        [FromBody] CrearTareaPredefinidaDTO dto)
+    {
+        var (exitoso, mensaje, resultado) = await _servicio.CrearDesdeFactoryAsync(
+            tipo, dto.Titulo, dto.Descripcion, dto.AsignadoA
+        );
+
+        if (!exitoso)
+            return BadRequest(new { mensaje });
+
+        return Ok(new { mensaje, tarea = resultado });
+    }
+
 
     #endregion
 

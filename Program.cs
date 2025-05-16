@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace GestionTareasApi
 {
@@ -61,7 +62,12 @@ namespace GestionTareasApi
             #region CONFIGURAR CONTROLADORES Y SWAGGER
 
             // AGREGA CONTROLADORES
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    // MUESTRA LOS ENUMS COMO STRINGS EN LUGAR DE NÚMEROS
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             // CONFIGURA SWAGGER PARA DOCUMENTACIÓN DE LA API
             builder.Services.AddSwaggerGen(c =>
@@ -98,11 +104,18 @@ namespace GestionTareasApi
 
             #endregion
 
+            #region CONFIGURAR LOGGER PARA EVENTOS
+
+            // OBTIENE EL LOGGER DEL SISTEMA Y LO CONFIGURA PARA USAR EN EVENTOS DE TAREA
             var app = builder.Build();
 
-            // CONFIGURA EL LOGGER PARA EVENTOS DE TAREA
-            var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("EventosTarea");
+            var logger = app.Services
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("EventosTarea");
+
             EventosTarea.ConfigurarLogger(logger);
+
+            #endregion
 
             #region MIDDLEWARE GLOBAL
 

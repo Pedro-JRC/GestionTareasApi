@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using static GestionTareasApi.Delegados.DelegadosTarea;
 using GestionTareasApi.Funciones;
+using GestionTareasApi.Fabricas;
+using GestionTareasApi.Enums;
 
 namespace GestionTareasApi.Servicios;
 
@@ -82,6 +84,47 @@ public class TareasService
     }
 
     #endregion
+
+    #region CREAR TAREA PREDEFINIDA DESDE FÁBRICA
+
+    /// <summary>
+    /// CREA UNA TAREA USANDO UNA CONFIGURACIÓN PREDEFINIDA SEGÚN SU TIPO.
+    /// SE PUEDEN CREAR TAREAS DE TIPO: ALTA, URGENTE O DOCUMENTACION.
+    /// </summary>
+    public async Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearDesdeFactoryAsync(
+        TipoTareaPredefinida tipo, string titulo, string descripcion, string asignadoA)
+    {
+        TareaGeneral? entidad = tipo switch
+        {
+            TipoTareaPredefinida.Alta => TareaFactory.CrearTareaAltaPrioridad(titulo, descripcion, asignadoA),
+            TipoTareaPredefinida.Urgente => TareaFactory.CrearTareaUrgente(titulo, descripcion, asignadoA),
+            TipoTareaPredefinida.Documentacion => TareaFactory.CrearTareaDocumentacion(titulo, descripcion, asignadoA),
+            _ => null
+        };
+
+        // VALIDACIÓN DEL USUARIO ASIGNADO (SI EXISTE)
+        if (!string.IsNullOrWhiteSpace(asignadoA))
+        {
+            var existeUsuario = await _context.Usuarios
+                .AnyAsync(u => u.NombreUsuario == asignadoA && u.Activo);
+
+            if (!existeUsuario)
+                return (false, $"El usuario '{asignadoA}' no existe o está inactivo.", null);
+        }
+
+        _context.Tareas.Add(entidad!);
+        await _context.SaveChangesAsync();
+
+        var tareaDTO = MapearADTO(entidad!);
+        EventosTarea.RegistrarEvento(tareaDTO);
+
+        var mensaje = EventosTarea.GenerarMensaje(tareaDTO);
+        return (true, mensaje, tareaDTO);
+    }
+
+    #endregion
+
+
 
     #region ACTUALIZAR UNA TAREA EXISTENTE
 

@@ -31,6 +31,16 @@ public class CrearTareaDTO
 
 #endregion
 
+#region DTO PARA CREAR UNA TAREA PERSONALIZADA
+public class CrearTareaPredefinidaDTO
+{
+    public string Titulo { get; set; } = string.Empty;
+    public string Descripcion { get; set; } = string.Empty;
+    public string? AsignadoA { get; set; }
+}
+
+#endregion
+
 #region DTO PARA ACTUALIZAR UNA TAREA
 
 public class ActualizarTareaDTO
