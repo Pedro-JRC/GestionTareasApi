@@ -15,6 +15,7 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - **Middleware personalizado** para manejo global de errores
 - **Logger** con eventos personalizados (`EventosTarea`)
 - **Delegados y Func<>** para lógica flexible de validación y filtrado
+- **Patrón Fábrica (Factory)** para crear tareas preconfiguradas
 
 ## 📂 Estructura del Proyecto
 
@@ -24,6 +25,7 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - `4-Controllers`: Endpoints de la API.
 - `Funciones`: Filtros y utilidades con `Func<>`, lambdas y delegados reutilizables.
 - `Delegados`: Delegados y firmas para validaciones desacopladas.
+- `Fabricas`: Métodos preconfigurados para crear tareas según su tipo.
 - `Utilidades`: Helpers como `SeguridadHelper` y `DatosAdicionalesHelper`.
 - `Eventos`: Registro centralizado de eventos (logging personalizado).
 - `Middleware`: Manejador de excepciones global.
@@ -73,10 +75,10 @@ dotnet run
 
 ### Autenticación
 
-| Método | Ruta                  | Descripción             |
-|--------|-----------------------|-------------------------|
-| POST   | /api/auth/login       | Iniciar sesión (JWT)    |
-| POST   | /api/auth/refrescartoken | Refrescar token JWT |
+| Método | Ruta                      | Descripción             |
+|--------|---------------------------|-------------------------|
+| POST   | /api/auth/login           | Iniciar sesión (JWT)    |
+| POST   | /api/auth/refrescartoken  | Refrescar token JWT     |
 
 ### Usuarios
 
@@ -90,13 +92,14 @@ dotnet run
 
 ### Tareas
 
-| Método | Ruta                     | Descripción                     |
-|--------|--------------------------|---------------------------------|
-| GET    | /api/tareas              | Listar tareas                   |
-| GET    | /api/tareas/{id}         | Obtener tarea por ID            |
-| POST   | /api/tareas              | Crear tarea                     |
-| PUT    | /api/tareas/{id}         | Actualizar tarea                |
-| DELETE | /api/tareas/{id}         | Eliminar tarea                  |
+| Método | Ruta                                 | Descripción                                 |
+|--------|--------------------------------------|---------------------------------------------|
+| GET    | /api/tareas                          | Listar tareas                               |
+| GET    | /api/tareas/{id}                     | Obtener tarea por ID                        |
+| POST   | /api/tareas                          | Crear tarea                                 |
+| PUT    | /api/tareas/{id}                     | Actualizar tarea                            |
+| DELETE | /api/tareas/{id}                     | Eliminar tarea                              |
+| POST   | /api/tareas/crear-desde-fabrica?tipo=Alta | Crear tarea preconfigurada usando fábrica |
 
 ### Filtros de Tareas
 
@@ -124,6 +127,22 @@ dotnet run
   "categoria": "Desarrollo",
   "asignadoA": "juan23"
 }
+```
+
+## 📋 Ejemplo de Payload para Crear Tarea desde Fábrica
+
+```json
+{
+  "titulo": "Parche de seguridad",
+  "descripcion": "Aplicar actualización crítica en producción",
+  "asignadoA": "adminQA"
+}
+```
+
+### Ejemplo de URL para llamar al endpoint de fábrica
+
+```
+POST /api/tareas/crear-desde-fabrica?tipo=Urgente
 ```
 
 ## ✅ Pruebas
