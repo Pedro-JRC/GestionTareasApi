@@ -57,27 +57,20 @@ public class TareasController : ControllerBase
 
     /// <summary>
     /// CREA UNA NUEVA TAREA CON LOS DATOS RECIBIDOS
+    /// LA TAREA SE ENCOLA Y SE PROCESARÁ DE FORMA SECUENCIAL.
     /// </summary>
     [HttpPost]
     public async Task<ActionResult> Crear([FromBody] CrearTareaDTO dto)
     {
-        // VALIDACIÓN DE MODELO
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // LLAMA AL SERVICIO PARA CREAR LA TAREA
-        var (exitoso, mensaje, nuevaTarea) = await _servicio.CrearAsync(dto);
+        var (exitoso, mensaje, _) = await _servicio.CrearAsync(dto);
 
-        // SI HUBO ERROR AL CREAR, RETORNA BADREQUEST
         if (!exitoso)
             return BadRequest(new { mensaje });
 
-        // RETORNA LA NUEVA TAREA CREADA
-        return Ok(new
-        {
-            mensaje,
-            tarea = nuevaTarea
-        });
+        return Ok(new { mensaje });
     }
 
     #endregion
@@ -87,41 +80,39 @@ public class TareasController : ControllerBase
     /// <summary>
     /// CREA UNA TAREA PRECONFIGURADA USANDO EL PATRÓN FÁBRICA.
     /// SELECCIONE EL TIPO DE TAREA ENTRE: 'Alta', 'Urgente' O 'Documentacion'.
+    /// LA TAREA SE ENCOLA Y SE PROCESA LUEGO.
     /// </summary>
     [HttpPost("crear-desde-fabrica")]
     public async Task<IActionResult> CrearDesdeFactory(
         [FromQuery] TipoTareaPredefinida tipo,
         [FromBody] CrearTareaPredefinidaDTO dto)
     {
-        var (exitoso, mensaje, resultado) = await _servicio.CrearDesdeFactoryAsync(
+        var (exitoso, mensaje, _) = await _servicio.CrearDesdeFactoryAsync(
             tipo, dto.Titulo, dto.Descripcion, dto.AsignadoA
         );
 
         if (!exitoso)
             return BadRequest(new { mensaje });
 
-        return Ok(new { mensaje, tarea = resultado });
+        return Ok(new { mensaje });
     }
-
 
     #endregion
 
     #region ACTUALIZAR TAREA EXISTENTE
 
     /// <summary>
-    /// ACTUALIZA UNA TAREA EXISTENTE POR SU ID
+    /// ACTUALIZA UNA TAREA EXISTENTE POR SU ID.
+    /// LA ACTUALIZACIÓN SE ENCOLA PARA EJECUTARSE DE FORMA SECUENCIAL.
     /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult> Actualizar(int id, [FromBody] ActualizarTareaDTO dto)
     {
-        // VERIFICA SI EL ID DE LA URL COINCIDE CON EL DEL CUERPO
         if (id != dto.Id)
             return BadRequest(new { mensaje = "El ID no coincide con el cuerpo de la solicitud." });
 
-        // LLAMA AL SERVICIO PARA ACTUALIZAR
         var (exitoso, mensaje) = await _servicio.ActualizarAsync(dto);
 
-        // SI NO EXISTE LA TAREA
         if (!exitoso)
             return NotFound(new { mensaje });
 

@@ -1,7 +1,6 @@
-
 # API de Gestión de Tareas
 
-Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados.
+Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados. Ahora también incluye procesamiento **reactivo secuencial con cola**, usando **Rx.NET**.
 
 ## 🚀 Tecnologías Usadas
 
@@ -15,12 +14,13 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - **Middleware personalizado** para manejo global de errores
 - **Logger** con eventos personalizados (`EventosTarea`)
 - **Delegados y Func<>** para lógica flexible de validación y filtrado
+- **Rx.NET** para cola reactiva y procesamiento secuencial
 
 ## 📂 Estructura del Proyecto
 
 - `1-Modelos`: Modelos de entidad como `UsuariosModel` y `TareaGeneral`.
 - `2-DTOs`: Objetos de transferencia para creación, actualización y respuesta.
-- `3-Servicios`: Lógica de negocio y acceso a datos.
+- `3-Servicios`: Lógica de negocio, validaciones, eventos y ahora cola reactiva.
 - `4-Controllers`: Endpoints de la API.
 - `Funciones`: Filtros y utilidades con `Func<>`, lambdas y delegados reutilizables.
 - `Delegados`: Delegados y firmas para validaciones desacopladas.
@@ -28,7 +28,7 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - `Eventos`: Registro centralizado de eventos (logging personalizado).
 - `Middleware`: Manejador de excepciones global.
 - `Data`: `AppDbContext` para EF Core.
-- `Program.cs`: Configuración principal del host, servicios y middlewares.
+- `Program.cs`: Configuración principal del host, servicios, middlewares y Logger.
 
 ## ⚙️ Configuración
 
@@ -90,13 +90,14 @@ dotnet run
 
 ### Tareas
 
-| Método | Ruta                     | Descripción                     |
-|--------|--------------------------|---------------------------------|
-| GET    | /api/tareas              | Listar tareas                   |
-| GET    | /api/tareas/{id}         | Obtener tarea por ID            |
-| POST   | /api/tareas              | Crear tarea                     |
-| PUT    | /api/tareas/{id}         | Actualizar tarea                |
-| DELETE | /api/tareas/{id}         | Eliminar tarea                  |
+| Método | Ruta                     | Descripción                                |
+|--------|--------------------------|--------------------------------------------|
+| GET    | /api/tareas              | Listar tareas                              |
+| GET    | /api/tareas/{id}         | Obtener tarea por ID                       |
+| POST   | /api/tareas              | Crear tarea (encolada con Rx.NET)          |
+| PUT    | /api/tareas/{id}         | Actualizar tarea (encolada con Rx.NET)     |
+| POST   | /api/tareas/crear-desde-fabrica | Crear tarea predefinida (encolada)   |
+| DELETE | /api/tareas/{id}         | Eliminar tarea                             |
 
 ### Filtros de Tareas
 

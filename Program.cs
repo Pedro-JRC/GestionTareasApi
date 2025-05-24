@@ -1,3 +1,4 @@
+using GestionTareasApi._3_Servicios;
 using GestionTareasApi.Data;
 using GestionTareasApi.Eventos;
 using GestionTareasApi.Servicios;
@@ -31,6 +32,8 @@ namespace GestionTareasApi
             builder.Services.AddScoped<TareasService>();
             builder.Services.AddScoped<UsuariosService>();
             builder.Services.AddScoped<ServicioAutenticacion>();
+            builder.Services.AddSingleton<ColaTareasRxService>();
+
 
             #endregion
 

@@ -8,16 +8,19 @@ using static GestionTareasApi.Delegados.DelegadosTarea;
 using GestionTareasApi.Funciones;
 using GestionTareasApi.Fabricas;
 using GestionTareasApi.Enums;
+using GestionTareasApi._3_Servicios;
 
 namespace GestionTareasApi.Servicios;
 
 public class TareasService
 {
     private readonly AppDbContext _context;
+    private readonly ColaTareasRxService _cola;
 
-    public TareasService(AppDbContext context)
+    public TareasService(AppDbContext context, ColaTareasRxService cola)
     {
         _context = context;
+        _cola = cola;
     }
 
     #region OBTENER TODAS LAS TAREAS
@@ -42,134 +45,148 @@ public class TareasService
 
     #region CREAR UNA NUEVA TAREA
 
-    public async Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearAsync(CrearTareaDTO dto)
+    /// <summary>
+    /// AGREGA UNA NUEVA TAREA A LA COLA PARA SER PROCESADA DE FORMA SECUENCIAL (FIFO).
+    /// EL MÉTODO NO DEVUELVE INMEDIATAMENTE LA TAREA, SINO UN RESULTADO DE ENCOLADO.
+    /// </summary>
+    public Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearAsync(CrearTareaDTO dto)
     {
-        ValidadorTareaDelegate validador = ValidacionesTareaService.ValidarDatosBasicos;
-        var (valido, mensajeValidacion) = validador(dto);
-
-        if (!valido)
-            return (false, mensajeValidacion, null);
-
-        if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
+        // RETORNA UNA RESPUESTA INMEDIATA CONFIRMANDO QUE LA TAREA FUE ENCOLADA
+        _cola.Agregar(async () =>
         {
-            var existeUsuario = await _context.Usuarios
-                .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
+            ValidadorTareaDelegate validador = ValidacionesTareaService.ValidarDatosBasicos;
+            var (valido, mensajeValidacion) = validador(dto);
+            if (!valido) return;
 
-            if (!existeUsuario)
-                return (false, $"El usuario '{dto.AsignadoA}' no existe o está inactivo.", null);
-        }
+            if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
+            {
+                var existeUsuario = await _context.Usuarios
+                    .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
 
-        var entidad = new TareaGeneral
-        {
-            Titulo = dto.Titulo,
-            Descripcion = dto.Descripcion,
-            FechaVencimiento = dto.FechaVencimiento,
-            Estado = dto.Estado,
-            DatosAdicionales = dto.DatosAdicionales != null
-                ? JsonSerializer.Serialize(dto.DatosAdicionales)
-                : null,
-            Prioridad = dto.Prioridad,
-            Categoria = dto.Categoria,
-            AsignadoA = dto.AsignadoA
-        };
+                if (!existeUsuario) return;
+            }
 
-        _context.Tareas.Add(entidad);
-        await _context.SaveChangesAsync();
+            var entidad = new TareaGeneral
+            {
+                Titulo = dto.Titulo,
+                Descripcion = dto.Descripcion,
+                FechaVencimiento = dto.FechaVencimiento,
+                Estado = dto.Estado,
+                DatosAdicionales = dto.DatosAdicionales != null
+                    ? JsonSerializer.Serialize(dto.DatosAdicionales)
+                    : null,
+                Prioridad = dto.Prioridad,
+                Categoria = dto.Categoria,
+                AsignadoA = dto.AsignadoA
+            };
 
-        var tareaDTO = MapearADTO(entidad);
-        EventosTarea.RegistrarEvento(tareaDTO);
+            _context.Tareas.Add(entidad);
+            await _context.SaveChangesAsync();
 
-        var mensajeEvento = EventosTarea.GenerarMensaje(tareaDTO);
-        return (true, mensajeEvento, tareaDTO);
+            var tareaDTO = MapearADTO(entidad);
+            EventosTarea.RegistrarEvento(tareaDTO);
+        });
+
+        // RETORNA UNA RESPUESTA DE CONFIRMACIÓN INMEDIATA (LA EJECUCIÓN OCURRIRÁ LUEGO)
+        return Task.FromResult<(bool, string?, TareaDTO?)>(
+            (true, "Tarea agregada a la cola para ser procesada.", null));
     }
 
     #endregion
+
 
     #region CREAR TAREA PREDEFINIDA DESDE FÁBRICA
 
     /// <summary>
     /// CREA UNA TAREA USANDO UNA CONFIGURACIÓN PREDEFINIDA SEGÚN SU TIPO.
     /// SE PUEDEN CREAR TAREAS DE TIPO: ALTA, URGENTE O DOCUMENTACION.
+    /// LA EJECUCIÓN ES ENCOLADA Y SE PROCESA DE FORMA SECUENCIAL.
     /// </summary>
-    public async Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearDesdeFactoryAsync(
+    public Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearDesdeFactoryAsync(
         TipoTareaPredefinida tipo, string titulo, string descripcion, string asignadoA)
     {
-        TareaGeneral? entidad = tipo switch
+        _cola.Agregar(async () =>
         {
-            TipoTareaPredefinida.Alta => TareaFactory.CrearTareaAltaPrioridad(titulo, descripcion, asignadoA),
-            TipoTareaPredefinida.Urgente => TareaFactory.CrearTareaUrgente(titulo, descripcion, asignadoA),
-            TipoTareaPredefinida.Documentacion => TareaFactory.CrearTareaDocumentacion(titulo, descripcion, asignadoA),
-            _ => null
-        };
+            TareaGeneral? entidad = tipo switch
+            {
+                TipoTareaPredefinida.Alta => TareaFactory.CrearTareaAltaPrioridad(titulo, descripcion, asignadoA),
+                TipoTareaPredefinida.Urgente => TareaFactory.CrearTareaUrgente(titulo, descripcion, asignadoA),
+                TipoTareaPredefinida.Documentacion => TareaFactory.CrearTareaDocumentacion(titulo, descripcion, asignadoA),
+                _ => null
+            };
 
-        // VALIDACIÓN DEL USUARIO ASIGNADO (SI EXISTE)
-        if (!string.IsNullOrWhiteSpace(asignadoA))
-        {
-            var existeUsuario = await _context.Usuarios
-                .AnyAsync(u => u.NombreUsuario == asignadoA && u.Activo);
+            if (entidad == null) return;
 
-            if (!existeUsuario)
-                return (false, $"El usuario '{asignadoA}' no existe o está inactivo.", null);
-        }
+            if (!string.IsNullOrWhiteSpace(asignadoA))
+            {
+                var existeUsuario = await _context.Usuarios
+                    .AnyAsync(u => u.NombreUsuario == asignadoA && u.Activo);
 
-        _context.Tareas.Add(entidad!);
-        await _context.SaveChangesAsync();
+                if (!existeUsuario) return;
+            }
 
-        var tareaDTO = MapearADTO(entidad!);
-        EventosTarea.RegistrarEvento(tareaDTO);
+            _context.Tareas.Add(entidad);
+            await _context.SaveChangesAsync();
 
-        var mensaje = EventosTarea.GenerarMensaje(tareaDTO);
-        return (true, mensaje, tareaDTO);
+            var tareaDTO = MapearADTO(entidad);
+            EventosTarea.RegistrarEvento(tareaDTO);
+        });
+
+        // SE RETORNA CONFIRMACIÓN DE QUE LA TAREA FUE ENCOLADA
+        return Task.FromResult<(bool, string?, TareaDTO?)>(
+            (true, "Tarea predefinida agregada a la cola para ser procesada.", null));
     }
 
     #endregion
-
 
 
     #region ACTUALIZAR UNA TAREA EXISTENTE
 
-    public async Task<(bool Exitoso, string Mensaje)> ActualizarAsync(ActualizarTareaDTO dto)
+    /// <summary>
+    /// ACTUALIZA UNA TAREA EXISTENTE USANDO LA COLA PARA GARANTIZAR ORDEN Y SEGURIDAD.
+    /// LA ACTUALIZACIÓN SE EJECUTA DE FORMA SECUENCIAL EN SEGUNDO PLANO.
+    /// </summary>
+    public Task<(bool Exitoso, string Mensaje)> ActualizarAsync(ActualizarTareaDTO dto)
     {
-        var tarea = await _context.Tareas.FindAsync(dto.Id);
-        if (tarea == null)
-            return (false, "Tarea no encontrada.");
-
-        ValidadorTareaActualizadaDelegate validador = ValidacionesTareaService.ValidarDatosActualizados;
-        var (valido, mensajeValidacion) = validador(dto);
-
-        if (!valido)
-            return (false, mensajeValidacion!);
-
-        if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
+        _cola.Agregar(async () =>
         {
-            var existeUsuario = await _context.Usuarios
-                .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
+            var tarea = await _context.Tareas.FindAsync(dto.Id);
+            if (tarea == null) return;
 
-            if (!existeUsuario)
-                return (false, $"El usuario '{dto.AsignadoA}' no existe o está inactivo.");
-        }
+            ValidadorTareaActualizadaDelegate validador = ValidacionesTareaService.ValidarDatosActualizados;
+            var (valido, mensajeValidacion) = validador(dto);
+            if (!valido) return;
 
-        tarea.Titulo = dto.Titulo;
-        tarea.Descripcion = dto.Descripcion;
-        tarea.FechaVencimiento = dto.FechaVencimiento;
-        tarea.Estado = dto.Estado;
-        tarea.DatosAdicionales = dto.DatosAdicionales != null
-            ? JsonSerializer.Serialize(dto.DatosAdicionales)
-            : null;
-        tarea.FechaCompletado = dto.FechaCompletado;
-        tarea.Prioridad = dto.Prioridad;
-        tarea.Categoria = dto.Categoria;
-        tarea.AsignadoA = dto.AsignadoA;
-        tarea.EstaActiva = dto.EstaActiva;
+            if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
+            {
+                var existeUsuario = await _context.Usuarios
+                    .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
 
-        await _context.SaveChangesAsync();
-        EventosTarea.RegistrarEvento(MapearADTO(tarea));
+                if (!existeUsuario) return;
+            }
 
-        return (true, "Tarea actualizada correctamente.");
+            tarea.Titulo = dto.Titulo;
+            tarea.Descripcion = dto.Descripcion;
+            tarea.FechaVencimiento = dto.FechaVencimiento;
+            tarea.Estado = dto.Estado;
+            tarea.DatosAdicionales = dto.DatosAdicionales != null
+                ? JsonSerializer.Serialize(dto.DatosAdicionales)
+                : null;
+            tarea.FechaCompletado = dto.FechaCompletado;
+            tarea.Prioridad = dto.Prioridad;
+            tarea.Categoria = dto.Categoria;
+            tarea.AsignadoA = dto.AsignadoA;
+            tarea.EstaActiva = dto.EstaActiva;
+
+            await _context.SaveChangesAsync();
+            EventosTarea.RegistrarEvento(MapearADTO(tarea));
+        });
+
+        // RESPUESTA INMEDIATA DE ENCOLADO, NO DEL RESULTADO FINAL
+        return Task.FromResult<(bool, string)>((true, "Tarea encolada para ser actualizada."));
     }
 
     #endregion
-
 
 
     #region ELIMINAR UNA TAREA
