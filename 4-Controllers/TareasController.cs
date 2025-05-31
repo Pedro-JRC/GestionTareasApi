@@ -139,4 +139,20 @@ public class TareasController : ControllerBase
     }
 
     #endregion
+
+    #region OBTENER PORCENTAJE DE TAREAS COMPLETADAS
+
+    /// <summary>
+    /// OBTIENE EL PORCENTAJE DE TAREAS COMPLETADAS USANDO MEMORIZACIÓN.
+    /// </summary>
+    [HttpGet("porcentaje-completadas")]
+    public async Task<ActionResult> ObtenerPorcentajeTareasCompletadas()
+    {
+        var tareas = await _servicio.ObtenerTodasAsync();
+        var porcentaje = _servicio.CalcularPorcentajeCompletadas(tareas);
+        return Ok(new { porcentaje });
+    }
+
+    #endregion
+
 }

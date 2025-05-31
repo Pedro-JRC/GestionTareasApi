@@ -16,11 +16,13 @@ public class TareasService
 {
     private readonly AppDbContext _context;
     private readonly ColaTareasRxService _cola;
+    private readonly MemorizadorTareasService _memorizador;
 
-    public TareasService(AppDbContext context, ColaTareasRxService cola)
+    public TareasService(AppDbContext context, ColaTareasRxService cola, MemorizadorTareasService memorizador)
     {
         _context = context;
         _cola = cola;
+        _memorizador = memorizador;
     }
 
     #region OBTENER TODAS LAS TAREAS
@@ -52,15 +54,18 @@ public class TareasService
     public Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearAsync(CrearTareaDTO dto)
     {
         // RETORNA UNA RESPUESTA INMEDIATA CONFIRMANDO QUE LA TAREA FUE ENCOLADA
-        _cola.Agregar(async () =>
+        _cola.Agregar(async serviceProvider =>
         {
+            // OBTIENE EL CONTEXTO DESDE EL SERVICE PROVIDER
+            var context = serviceProvider.GetRequiredService<AppDbContext>();
+
             ValidadorTareaDelegate validador = ValidacionesTareaService.ValidarDatosBasicos;
             var (valido, mensajeValidacion) = validador(dto);
             if (!valido) return;
 
             if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
             {
-                var existeUsuario = await _context.Usuarios
+                var existeUsuario = await context.Usuarios
                     .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
 
                 if (!existeUsuario) return;
@@ -80,8 +85,8 @@ public class TareasService
                 AsignadoA = dto.AsignadoA
             };
 
-            _context.Tareas.Add(entidad);
-            await _context.SaveChangesAsync();
+            context.Tareas.Add(entidad);
+            await context.SaveChangesAsync();
 
             var tareaDTO = MapearADTO(entidad);
             EventosTarea.RegistrarEvento(tareaDTO);
@@ -95,6 +100,7 @@ public class TareasService
     #endregion
 
 
+
     #region CREAR TAREA PREDEFINIDA DESDE FÁBRICA
 
     /// <summary>
@@ -105,8 +111,10 @@ public class TareasService
     public Task<(bool Exitoso, string? Mensaje, TareaDTO? Resultado)> CrearDesdeFactoryAsync(
         TipoTareaPredefinida tipo, string titulo, string descripcion, string asignadoA)
     {
-        _cola.Agregar(async () =>
+        _cola.Agregar(async serviceProvider =>
         {
+            var context = serviceProvider.GetRequiredService<AppDbContext>();
+
             TareaGeneral? entidad = tipo switch
             {
                 TipoTareaPredefinida.Alta => TareaFactory.CrearTareaAltaPrioridad(titulo, descripcion, asignadoA),
@@ -119,14 +127,14 @@ public class TareasService
 
             if (!string.IsNullOrWhiteSpace(asignadoA))
             {
-                var existeUsuario = await _context.Usuarios
+                var existeUsuario = await context.Usuarios
                     .AnyAsync(u => u.NombreUsuario == asignadoA && u.Activo);
 
                 if (!existeUsuario) return;
             }
 
-            _context.Tareas.Add(entidad);
-            await _context.SaveChangesAsync();
+            context.Tareas.Add(entidad);
+            await context.SaveChangesAsync();
 
             var tareaDTO = MapearADTO(entidad);
             EventosTarea.RegistrarEvento(tareaDTO);
@@ -140,6 +148,7 @@ public class TareasService
     #endregion
 
 
+
     #region ACTUALIZAR UNA TAREA EXISTENTE
 
     /// <summary>
@@ -148,9 +157,11 @@ public class TareasService
     /// </summary>
     public Task<(bool Exitoso, string Mensaje)> ActualizarAsync(ActualizarTareaDTO dto)
     {
-        _cola.Agregar(async () =>
+        _cola.Agregar(async serviceProvider =>
         {
-            var tarea = await _context.Tareas.FindAsync(dto.Id);
+            var context = serviceProvider.GetRequiredService<AppDbContext>();
+
+            var tarea = await context.Tareas.FindAsync(dto.Id);
             if (tarea == null) return;
 
             ValidadorTareaActualizadaDelegate validador = ValidacionesTareaService.ValidarDatosActualizados;
@@ -159,7 +170,7 @@ public class TareasService
 
             if (!string.IsNullOrWhiteSpace(dto.AsignadoA))
             {
-                var existeUsuario = await _context.Usuarios
+                var existeUsuario = await context.Usuarios
                     .AnyAsync(u => u.NombreUsuario == dto.AsignadoA && u.Activo);
 
                 if (!existeUsuario) return;
@@ -178,7 +189,7 @@ public class TareasService
             tarea.AsignadoA = dto.AsignadoA;
             tarea.EstaActiva = dto.EstaActiva;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             EventosTarea.RegistrarEvento(MapearADTO(tarea));
         });
 
@@ -187,6 +198,7 @@ public class TareasService
     }
 
     #endregion
+
 
 
     #region ELIMINAR UNA TAREA
@@ -205,6 +217,33 @@ public class TareasService
     }
 
     #endregion
+
+    #region CALCULAR PORCENTAJE DE TAREAS COMPLETADAS
+
+    /// <summary>
+    /// CALCULA EL PORCENTAJE DE TAREAS COMPLETADAS.
+    /// USA MEMORIZACIÓN PARA EVITAR CÁLCULOS REPETITIVOS.
+    /// </summary>
+    public string CalcularPorcentajeCompletadas(List<TareaDTO> tareas)
+    {
+        string clave = string.Join("|", tareas.Select(t => $"{t.Id}:{t.Estado}"));
+
+        if (_memorizador.TryObtenerPorcentaje(clave, out var porcentaje))
+            return $"{porcentaje:0.##}%";
+
+        if (tareas.Count == 0)
+            return "0%";
+
+        int completadas = tareas.Count(t => t.Estado.Equals("Completado", StringComparison.OrdinalIgnoreCase));
+        porcentaje = (double)completadas / tareas.Count * 100;
+
+        _memorizador.GuardarPorcentaje(clave, porcentaje);
+        return $"{porcentaje:0.##}%";
+    }
+
+    #endregion
+
+
 
     #region MAPEO A DTO
 
@@ -229,6 +268,7 @@ public class TareasService
         dto.DiasRestantes = FuncionesTarea.CalcularDiasRestantes(dto);
         return dto;
     }
+
 
 
     #endregion

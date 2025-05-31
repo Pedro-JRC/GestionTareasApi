@@ -33,6 +33,7 @@ namespace GestionTareasApi
             builder.Services.AddScoped<UsuariosService>();
             builder.Services.AddScoped<ServicioAutenticacion>();
             builder.Services.AddSingleton<ColaTareasRxService>();
+            builder.Services.AddSingleton<MemorizadorTareasService>();
 
 
             #endregion

@@ -1,6 +1,7 @@
+
 # API de Gestión de Tareas
 
-Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados. Ahora también incluye procesamiento **reactivo secuencial con cola**, usando **Rx.NET**.
+Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados. Ahora también incluye procesamiento **reactivo secuencial con cola** usando **Rx.NET** y **memorización de resultados** para operaciones costosas como el cálculo de porcentaje de tareas completadas.
 
 ## 🚀 Tecnologías Usadas
 
@@ -15,12 +16,13 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - **Logger** con eventos personalizados (`EventosTarea`)
 - **Delegados y Func<>** para lógica flexible de validación y filtrado
 - **Rx.NET** para cola reactiva y procesamiento secuencial
+- **Memorización** con almacenamiento en caché manual de cálculos intensivos
 
 ## 📂 Estructura del Proyecto
 
 - `1-Modelos`: Modelos de entidad como `UsuariosModel` y `TareaGeneral`.
 - `2-DTOs`: Objetos de transferencia para creación, actualización y respuesta.
-- `3-Servicios`: Lógica de negocio, validaciones, eventos y ahora cola reactiva.
+- `3-Servicios`: Lógica de negocio, validaciones, eventos, Rx.NET y memorización.
 - `4-Controllers`: Endpoints de la API.
 - `Funciones`: Filtros y utilidades con `Func<>`, lambdas y delegados reutilizables.
 - `Delegados`: Delegados y firmas para validaciones desacopladas.
@@ -98,6 +100,7 @@ dotnet run
 | PUT    | /api/tareas/{id}         | Actualizar tarea (encolada con Rx.NET)     |
 | POST   | /api/tareas/crear-desde-fabrica | Crear tarea predefinida (encolada)   |
 | DELETE | /api/tareas/{id}         | Eliminar tarea                             |
+| GET    | /api/tareas/porcentaje-completadas | Obtener % tareas completadas (memorizado) |
 
 ### Filtros de Tareas
 
@@ -140,4 +143,4 @@ dotnet run
 
 **Autor:** Pedro Rosario  
 **Proyecto Educativo** – Curso C# .NET Avanzado  
-**Última actualización:** Mayo 2025
+**Última actualización:** 31 Mayo 2025
