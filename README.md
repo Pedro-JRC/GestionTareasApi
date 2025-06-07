@@ -143,4 +143,4 @@ dotnet run
 
 **Autor:** Pedro Rosario  
 **Proyecto Educativo** – Curso C# .NET Avanzado  
-**Última actualización:** 31 Mayo 2025
+**Última actualización:** 6 Junio 2025
