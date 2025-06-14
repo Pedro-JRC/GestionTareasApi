@@ -1,7 +1,6 @@
-
 # API de Gestión de Tareas
 
-Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados. Ahora también incluye procesamiento **reactivo secuencial con cola** usando **Rx.NET** y **memorización de resultados** para operaciones costosas como el cálculo de porcentaje de tareas completadas.
+Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como autenticación con JWT, asignación de tareas, filtros avanzados, almacenamiento de datos adicionales personalizados y validaciones flexibles mediante delegados. Ahora también incluye procesamiento **reactivo secuencial con cola** usando **Rx.NET**, **memorización de resultados** para operaciones costosas y **notificaciones en tiempo real** con **SignalR**.
 
 ## 🚀 Tecnologías Usadas
 
@@ -17,6 +16,7 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - **Delegados y Func<>** para lógica flexible de validación y filtrado
 - **Rx.NET** para cola reactiva y procesamiento secuencial
 - **Memorización** con almacenamiento en caché manual de cálculos intensivos
+- **SignalR** para notificaciones en tiempo real
 
 ## 📂 Estructura del Proyecto
 
@@ -30,6 +30,7 @@ Esta API permite gestionar tareas y usuarios, incluyendo funcionalidades como au
 - `Eventos`: Registro centralizado de eventos (logging personalizado).
 - `Middleware`: Manejador de excepciones global.
 - `Data`: `AppDbContext` para EF Core.
+- `SignalR`: Contiene el `AppHub` para eventos en tiempo real.
 - `Program.cs`: Configuración principal del host, servicios, middlewares y Logger.
 
 ## ⚙️ Configuración
@@ -96,7 +97,7 @@ dotnet run
 |--------|--------------------------|--------------------------------------------|
 | GET    | /api/tareas              | Listar tareas                              |
 | GET    | /api/tareas/{id}         | Obtener tarea por ID                       |
-| POST   | /api/tareas              | Crear tarea (encolada con Rx.NET)          |
+| POST   | /api/tareas              | Crear tarea (encolada con Rx.NET) y notifica con SignalR |
 | PUT    | /api/tareas/{id}         | Actualizar tarea (encolada con Rx.NET)     |
 | POST   | /api/tareas/crear-desde-fabrica | Crear tarea predefinida (encolada)   |
 | DELETE | /api/tareas/{id}         | Eliminar tarea                             |
@@ -143,4 +144,4 @@ dotnet run
 
 **Autor:** Pedro Rosario  
 **Proyecto Educativo** – Curso C# .NET Avanzado  
-**Última actualización:** 6 Junio 2025
+**Última actualización:** 13 Junio 2025

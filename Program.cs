@@ -2,6 +2,7 @@ using GestionTareasApi._3_Servicios;
 using GestionTareasApi.Data;
 using GestionTareasApi.Eventos;
 using GestionTareasApi.Servicios;
+using GestionTareasApi.SignalR;
 using GestorTareasApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,9 @@ namespace GestionTareasApi
             builder.Services.AddScoped<ServicioAutenticacion>();
             builder.Services.AddSingleton<ColaTareasRxService>();
             builder.Services.AddSingleton<MemorizadorTareasService>();
+
+            // REGISTRAR EL HUB DE SIGNALR
+            builder.Services.AddSignalR();
 
 
             #endregion
@@ -153,6 +157,10 @@ namespace GestionTareasApi
 
             // MAPEA LOS CONTROLADORES
             app.MapControllers();
+
+            // CONFIGURAR LA RUTA DEL HUB DE SIGNALR
+            app.MapHub<AppHub>("/hub/app");
+
 
             #endregion
 

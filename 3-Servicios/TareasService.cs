@@ -9,6 +9,8 @@ using GestionTareasApi.Funciones;
 using GestionTareasApi.Fabricas;
 using GestionTareasApi.Enums;
 using GestionTareasApi._3_Servicios;
+using GestionTareasApi.SignalR;
+using Microsoft.AspNetCore.SignalR;
 
 namespace GestionTareasApi.Servicios;
 
@@ -17,12 +19,14 @@ public class TareasService
     private readonly AppDbContext _context;
     private readonly ColaTareasRxService _cola;
     private readonly MemorizadorTareasService _memorizador;
+    private readonly IHubContext<AppHub> _hub;
 
-    public TareasService(AppDbContext context, ColaTareasRxService cola, MemorizadorTareasService memorizador)
+    public TareasService(AppDbContext context, ColaTareasRxService cola, MemorizadorTareasService memorizador, IHubContext<AppHub> hub)
     {
         _context = context;
         _cola = cola;
         _memorizador = memorizador;
+        _hub = hub;
     }
 
     #region OBTENER TODAS LAS TAREAS
@@ -58,6 +62,9 @@ public class TareasService
         {
             // OBTIENE EL CONTEXTO DESDE EL SERVICE PROVIDER
             var context = serviceProvider.GetRequiredService<AppDbContext>();
+            // OBTIENE EL HUB PARA NOTIFICACIONES EN TIEMPO REAL
+            var hubContext = serviceProvider.GetRequiredService<IHubContext<AppHub>>();
+
 
             ValidadorTareaDelegate validador = ValidacionesTareaService.ValidarDatosBasicos;
             var (valido, mensajeValidacion) = validador(dto);
@@ -90,6 +97,10 @@ public class TareasService
 
             var tareaDTO = MapearADTO(entidad);
             EventosTarea.RegistrarEvento(tareaDTO);
+
+            // NOTIFICA A TODOS LOS CLIENTES CONECTADOS QUE SE CREÓ UNA NUEVA TAREA
+            await hubContext.Clients.All.SendAsync("TareaCreada", tareaDTO);
+
         });
 
         // RETORNA UNA RESPUESTA DE CONFIRMACIÓN INMEDIATA (LA EJECUCIÓN OCURRIRÁ LUEGO)
