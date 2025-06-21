@@ -1,80 +1,84 @@
 
-# 🧪 xUnitTest – Pruebas Unitarias para Gestión de Tareas API
+<h1 align="center">🧪 Proyecto de Pruebas Unitarias - xUnitTest</h1>
+<p align="center">
+  Este proyecto contiene un conjunto de pruebas automatizadas con <strong>xUnit</strong> y <strong>Moq</strong> para garantizar la calidad y correcto funcionamiento de la API <code>GestionTareasApi</code>.
+</p>
 
-Este proyecto contiene un conjunto de **10 pruebas unitarias clave** diseñadas para validar la lógica principal de la API `GestionTareasApi`.
-
-Las pruebas cubren funcionalidades críticas como autenticación, validación de usuarios, encolado de tareas, y comportamiento reactivo en la cola de tareas.
-
----
-
-## 🚀 Tecnologías Usadas
-
-- **.NET 9**
-- **xUnit**
-- **Moq**
-- **EF Core InMemory**
-- **Microsoft.Extensions.DependencyInjection**
+<p align="center">
+  <img src="https://img.shields.io/badge/Tested%20With-xUnit%20%2B%20Moq-green" />
+  <img src="https://img.shields.io/badge/Coverage-10%20Pruebas%20Críticas-blue" />
+  <img src="https://img.shields.io/badge/Estado-Estable-brightgreen" />
+</p>
 
 ---
 
-## 📂 Estructura del Proyecto
+## 🎯 Objetivo
 
-```
-xUnitTest/
-├── EntornoPruebas.cs
-├── DummyScopeFactory.cs
-├── Tests/
-│   ├── 01_Login_Valido.cs
-│   ├── 02_Login_ContraseñaIncorrecta.cs
-│   └── ... hasta la 10
-└── xUnitTest.csproj
-```
+Este proyecto tiene como objetivo validar los casos críticos de negocio, autenticación, lógica de tareas y validaciones del sistema. Está desarrollado con **xUnit** como framework de testing y utiliza **Moq** para simular dependencias externas como servicios, base de datos o loggers.
 
 ---
 
-## 🧪 Pruebas Implementadas
+## 🔍 Pruebas implementadas
 
-| Nº  | Prueba                                     | Resultado Esperado                          |
-|-----|--------------------------------------------|----------------------------------------------|
-| 01  | Login válido                                | Devuelve token JWT correctamente             |
-| 02  | Contraseña incorrecta                       | Rechaza el inicio de sesión                  |
-| 03  | Refresh token                               | Renueva token si está por expirar           |
-| 04  | Registro duplicado                          | Rechaza si el usuario ya existe             |
-| 05  | Contraseñas no coinciden                    | No permite actualizar usuario               |
-| 06  | Porcentaje tareas completadas              | Calcula correctamente el porcentaje          |
-| 07  | Crear tarea válida                          | Encola correctamente la tarea                |
-| 08  | Actualizar tarea inexistente                | No realiza ninguna acción                    |
-| 09  | Validación de descripción muy corta         | Retorna error de validación                  |
-| 10  | Cola Rx.NET procesa en orden (FIFO)         | Asegura procesamiento secuencial             |
+El directorio `Tests/` contiene 10 clases, cada una validando un escenario específico:
+
+| Nº | Prueba                                           | Verifica que...                                   |
+|----|--------------------------------------------------|---------------------------------------------------|
+| 01 | Login válido                                     | Devuelva correctamente el token JWT              |
+| 02 | Contraseña incorrecta                            | El acceso sea denegado                           |
+| 03 | Token próximo a expirar                          | Se renueve automáticamente                       |
+| 04 | Registro duplicado                               | El usuario no pueda ser registrado dos veces     |
+| 05 | Contraseñas no coinciden                         | Se rechace la actualización                      |
+| 06 | Cálculo de porcentaje completado                 | Sea correcto                                      |
+| 07 | Tarea válida se encola                           | Y sea confirmada como encolada                   |
+| 08 | Actualización de tarea inexistente               | No cause errores y retorne false                 |
+| 09 | Validación de descripción                        | Rechace descripciones cortas                     |
+| 10 | Procesamiento FIFO (Rx.NET)                      | Las tareas se ejecuten en el orden correcto      |
 
 ---
 
-## ▶️ Ejecutar las pruebas
+## 🧪 Cómo ejecutar las pruebas
 
-### Visual Studio
-
-1. Abrir solución `GestionTareasApi.sln`.
-2. Ir al panel **Test Explorer** (`Ctrl+E, T`).
-3. Click en **Run All Tests**.
-
-### Terminal
-
-Desde la raíz del proyecto:
+Puedes ejecutar todas las pruebas desde la terminal:
 
 ```bash
 dotnet test xUnitTest
 ```
 
----
-
-## ℹ️ Notas
-
-- Las pruebas usan `DbContext InMemory` y mocks con `Moq`.
-- El archivo `EntornoPruebas.cs` centraliza la preparación del entorno.
-- Cada archivo en `Tests/` está numerado y enfocado en un caso crítico.
+O bien desde **Visual Studio**, abriendo la ventana `Test Explorer` y ejecutando cada caso individualmente.
 
 ---
 
-**Autor:** Pedro Rosario  
-**Módulo:** Pruebas Unitarias – Proyecto `GestionTareasApi`  
-**Última actualización:** Junio 2025
+## 🧱 Estructura
+
+```
+xUnitTest/
+├── EntornoPruebas.cs           # Contexto común con mocks, contexto en memoria, helpers
+├── Tests/
+│   ├── 01_Login_Valido.cs
+│   ├── 02_Login_ContraseñaIncorrecta.cs
+│   ├── ...
+│   └── 10_ColaTareasRx_ProcesaSecuencialmente.cs
+├── xUnitTest.csproj
+└── README.md                   # Este archivo
+```
+
+---
+
+## 🛠️ Tecnologías utilizadas
+
+- **xUnit 2.9.3**
+- **Moq 4.20+**
+- **Microsoft.EntityFrameworkCore.InMemory**
+- **.NET 9**
+
+---
+
+## ✍️ Autor
+
+**Pedro Rosario**  
+Proyecto creado para validar la arquitectura y lógica de la API GestiónTareasApi de forma aislada, modular y profesional.
+
+---
+
+<p align="center"><strong>✅ Código probado es código confiable. ¡Aporta o expande estas pruebas con confianza!</strong></p>
