@@ -19,6 +19,12 @@ namespace GestionTareasApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddHttpsRedirection(options =>
+            {
+                options.HttpsPort = 7233; // Asegúrate que coincida con el puerto configurado en IIS
+            });
+
+
             #region CONFIGURAR DB CONTEXT
 
             // CONFIGURA EL CONTEXTO DE BASE DE DATOS CON SQL SERVER
@@ -134,16 +140,18 @@ namespace GestionTareasApi
 
             #region CONFIGURACIÓN DE SWAGGER
 
-            // MUESTRA SWAGGER SOLO EN ENTORNO DE DESARROLLO
-            if (app.Environment.IsDevelopment())
+            #region CONFIGURACIÓN DE SWAGGER
+
+            // SIEMPRE MOSTRAR SWAGGER
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                app.UseSwagger();
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API de Gestión de Tareas v1");
-                    c.RoutePrefix = "swagger";
-                });
-            }
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "API de Gestión de Tareas v1");
+                c.RoutePrefix = "";
+            });
+
+            #endregion
+
 
             #endregion
 
